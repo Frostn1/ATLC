@@ -3,29 +3,43 @@ Animation Tooling Library for C made using a special formatting file
 ( Pronounced as Atlas )
 
 ## File format
-Using .atl files we can create our own animation file, inorder to create ascii styles and movements.
+Using .atl files we can create our own animation file, inorder to create ascii styles and movements.<br>
+
+As each frame is read and proccessed, its executed by the library code ( aka `WhiteMarker` ), and used to display the animation on your screen<br>
 
 ---
 
 ### The atl header
 Every .atl file includes a header at the start of the file, which gives us meta data about the file itself.<br>
+
+As we don't know the size of the file we are about to parse, but the number of frames we need to parse ( more on frames later on ), we can parse the entire file by counting the number of frames we have read so far.<br>
+
 The header can be visually abstracted as this `C` struct :<br>
 ```c
 struct atl_header {
     char magic[3]; // `ATL`, lets us know we got the right file infront of us
+    uint8_t atl_mode; // Current atl mode the file is in
     uint32_t frames_count; // Number of frames in our file
-    uintxx_t frames[]; // Frames indices
+    uintxx_t index_table[]; // Frames indices
     uint8_t colormode; // Lets us know the color moode ( i.e. amount of bits per color the animation uses )
-    uint64_t offsets_count; // Number of frames the overdue max frame size
-    uint64_t offsets[]; // Frames index
+    uint64_t overflow_count; // Number of frames the overdue max frame size
+    uint64_t overflow_table[]; // Frames indices which overflow the max frame size
     
 };
 ```
+><b>index_table</b> - Table which is used to captrue the indices of all of the frames in the file, relative to the start of the file.<br>
+Each item in the array will be relatiive in size to the atl mode the file is in.<br><br>So in ATL-8 mode, each item in the array ( i.e. index_table ), can be represented with the `C` size of <font color="#0081cd"><i>uint8_t</i></font>.
 
-As we don't know the size of the file we are about to parse, but the number of frames we need to parse ( more on frames later on ), we can parse the entire file by counting the number of frames we have read so far.<br>
+><b>overflow_table</b> - Frames index that overdue the max size limit for each frame ( dictated by the atl mode ), the index is relative to the start of the file.<br><br>
+The size of the `overflow_table` field will be relative to the `overflow_count` field, which will count the number of frames that have overflowed in the current file, and not all of the frames ( This is different from how the `index_table` works).<br><br>This means it will be more memory efficient, when no frame overflowed, no memory will be used
 
-<b>offsets</b> - Frames index that overdue the max size limit for each frame ( dictated by the atl mode ), the index is relative to the start of the file.
-As each frame is read and proccessed, its executed by the library code ( aka `WhiteMarker` ), and used to display the animation on your screen<br>
+><b>atl_mode</b> - Dictates the mode ( i.e. frame size ) the file is limited at.<br><br>
+[ <i>ATL-8</i> ] : mode where every frame size can be represented with an 8 bit unsigned number.<br>
+[ <i>ATL-16</i> ] : mode where every frame size can be represented with an 16 bit unsigned number.<br>
+[ <i>ATL-32</i> ] : mode where every frame size can be represented with an 32 bit unsigned number.<br>
+[ <i>ATL-64</i> ] : mode where every frame size can be represented with an 64 bit unsigned number.<br>
+
+
 
 ---
 
@@ -49,8 +63,10 @@ struct frame_header {
 ```
 
 As we can already see the `frame_header` has to unique fields which capture the time between opcodes execution in each frames, which relate to each other in some way.<br>
-<b>default_tick</b> - Default time between each opcode execution in the frame, noted in nano seconds.<br>
-<b>tick_mult</b> - As showing a second using nano seconds, will make a very large number, we can use a 10 expoonent multiplier to make this simpler, and more memory conservative.
+
+><b>default_tick</b> - Default time between each opcode execution in the frame, noted in nano seconds.<br>
+
+><b>tick_mult</b> - As showing a second using nano seconds, will make a very large number, we can use a 10 expoonent multiplier to make this simpler, and more memory conservative.
 
 ---
 
