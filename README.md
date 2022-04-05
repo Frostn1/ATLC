@@ -50,9 +50,8 @@ Each frame is used to display some kind of animation on the screen, and cutting 
 
 Frames, as the file itself, also have their own header,
 which can be visually abstracted using `C` structs system, as follows :<br>
-
 ```c
-struct frame_header {
+struct atl_frame_header {
     
     uint16_t frame_index; // Lets us know the index of the 
     current frame, marked with the file creator
@@ -67,6 +66,34 @@ As we can already see the `frame_header` has to unique fields which capture the 
 ><b>default_tick</b> - Default time between each opcode execution in the frame, noted in nano seconds.<br>
 
 ><b>tick_mult</b> - As showing a second using nano seconds, will make a very large number, we can use a 10 expoonent multiplier to make this simpler, and more memory conservative.
+
+In order to read frames, and extract the opcodes that are in them, there is a general function that can be modified and improved on each specific machine and enviorment, that goes as such :
+```c
+static int frame_count = 0;
+static int overflow_count = 0;
+
+/* Returns next frame header to process or NULL */
+atl_frame_header* read_frame(void *data, size_t current_offset, atl_header *ahdr, atl_frame_header *hdr) {
+  
+  frame_count += 1;
+  ...
+  atl_frame_header *next;
+  if(hdr->size == 0) {
+    if(overflow_count >= ahdr->overflow_count) next = NULL;
+    else next = &data[ahdr->overflow_table[overflow_count++]];
+  } else {
+    next = &data[current_offset];
+  }
+  ...
+  if(frame_count >= ahdr->frames_count) next = NULL;
+  return next;
+}
+```
+
+To put this in more of a general prespective we can think of the protocol of reading a frame in this sequence as this way, <br>
+the reading implementation scans `index_table` from left to right, as it keeps track of how many values overflowed ( It can detect this, as overflowed indeces will have a value of 0).<br>
+Once it reaches a overflowed frame, it knows that no values overflowed before it, so it looks up index 0 in the `overflow_table`, and so on for anay new overflowed values.
+
 
 ---
 
