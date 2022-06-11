@@ -55,7 +55,7 @@ struct atl_frame_header {
     
     uint16_t frame_index; // Lets us know the index of the 
     current frame, marked with the file creator
-    uint64_t size; // Size of the current frame
+    uintxx_t size; // Size of the current frame
     uint16_t default_tick; // Default time delay
     int16_t tick_mult; // 10 expoonent multiplier for delay conversion+
 };
