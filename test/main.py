@@ -3,16 +3,25 @@ A test file to create semi defined .atl files for test runs
 """
 
 import struct
+import binascii
 
 class Casting:
     DITCH_BINARY_START = 2
-    
+    BYTE_SIZE = 8
     @staticmethod
     def int_to_bin(val = 0, bit_count = 0) -> str:
         
         return bin(val)[Casting.DITCH_BINARY_START:Casting.DITCH_BINARY_START+bit_count]
 
-
+    @staticmethod
+    def bin_to_ascii(val = "") -> str:
+        if len(val) % 8 != 0:
+            val = "0" * val % 8 + val
+        # print(f"val {val}")
+        new_list = [val[i:i+Casting.BYTE_SIZE] for i in range(0, len(val), Casting.BYTE_SIZE)]
+        new_list = [chr(int(i,2)) for i in new_list]
+        
+        return "".join(new_list)
 
 class atl_header:
     MODES = [
@@ -34,22 +43,23 @@ class atl_header:
         if self.atl_mode not in atl_header.MODES:
             print(f"error occured :\nMode .no {self.atl_mode} not existent.\nCheck current modes for further information, i.e. {', '.join(MODES)}")
             return ""
-        base_str = f"ATL{self.atl_mode:08b}{self.frames_count:032b}"
+        Casting.bin_to_ascii(f'{self.atl_mode:08b}')
+        base_str = f"ATL{Casting.bin_to_ascii(f'{self.atl_mode:08b}')}{Casting.bin_to_ascii(f'{self.frames_count:032b}')}"
         for index in self.index_table:
-            base_str += format(index, f"0{self.atl_mode}b")
-        base_str += f"{self.colormode:08b}"
-        base_str += format(self.overflow_count, f"0{atl_header.OVERFLOW_BIT_SIZE}b")
+            base_str += Casting.bin_to_ascii(format(index, f"0{self.atl_mode}b"))
+        base_str += Casting.bin_to_ascii(f"{self.colormode:08b}")
+        base_str += Casting.bin_to_ascii(format(self.overflow_count, f"0{atl_header.OVERFLOW_BIT_SIZE}b"))
         for index in self.overflowTable:
-            base_str += format(index, f"0{atl_header.OVERFLOW_BIT_SIZE}b")
+            base_str += Casting.bin_to_ascii(format(index, f"0{atl_header.OVERFLOW_BIT_SIZE}b"))
 
         return base_str
 
 PATH = "test.atl"
 ATL_HEADER = atl_header(8, 2, [25, 61], 1, 0, [])
 def main():
-    with open(PATH) as filep:
-        print(str(ATL_HEADER))
-
+    with open(PATH, 'w') as filep:
+        filep.write(str(ATL_HEADER))
+        # print(str(ATL_HEADER))
 
 if __name__ == "__main__":
     main()
